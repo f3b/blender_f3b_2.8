@@ -13,7 +13,7 @@ def exportCustomProperties(ctx: F3bContext,data: f3b.datas_pb2.Data,src:bpy.type
     if len(keys) > 0:
         # custom_params = dst_data.Extensions[f3b.custom_params_pb2.custom_params].add()
         custom_params = data.custom_params.add()
-        custom_params.id = "params_" + ctx.isOf(src)
+        custom_params.id = "params_" + ctx.idOf(src)
         for key in keys:
             param = custom_params.params.add()
             param.name = key
@@ -56,6 +56,6 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                 cnv_rotation(rot_quat(obj), tobject.rotation)
             if obj.parent is not None:
                 Relations.add(ctx, data, ctx.idOf(obj.parent), ctx.idOf(obj))
-            exportCustomProperties(data, ctx, obj, tobject)
+            exportCustomProperties(ctx,data, obj, tobject)
         else:
             log.debug("Skip "+obj+" already exported")

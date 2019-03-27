@@ -31,4 +31,6 @@ def startExport(ctx: F3bContext ,scene: bpy.types.Scene):
     ActionExporter.export(ctx,data,scene)
     PhysicsExporter.export(ctx,data,scene)
     ForceFieldExporter.export(ctx,data,scene)
+
+    return data
     

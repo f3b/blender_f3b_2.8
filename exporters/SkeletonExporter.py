@@ -22,7 +22,7 @@ def export_skeleton(ctx: F3bContext,src, dst):
         # retreive transform local to parent
         boneMat = src_bone.matrix_local
         if src_bone.parent:
-            boneMat = src_bone.parent.matrix_local.inverted() * src_bone.matrix_local
+            boneMat = src_bone.parent.matrix_local.inverted() @ src_bone.matrix_local
         loc, quat, sca = boneMat.decompose()
 
         # Can't use armature.convert_space

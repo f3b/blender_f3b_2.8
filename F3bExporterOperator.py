@@ -49,14 +49,11 @@ class F3bExporterOperator(bpy.types.Operator, ExportHelper):
         topath=os.path.dirname(self.filepath)
 
         f3bctx=F3bContext(self,self.filepath,topath)
-        F3bExporter.startExport(f3bctx,scene)
+        data=F3bExporter.startExport(f3bctx,scene)
 
-        # data = f3b.datas_pb2.Data()
-        # cfg = ExportCfg(is_preview=False, assets_path=assets_path,option_export_selection=self.option_export_selection,textures_to_dds=self.option_convert_texture_dds,export_tangents=self.option_export_tangents,remove_doubles=self.option_remove_doubles)
-        # export(scene, data, cfg)
-
-        # file = open(self.filepath, "wb")
-        # file.write(data.SerializeToString())
-        # file.close()
+  
+        file = open(self.filepath, "wb")
+        file.write(data.SerializeToString())
+        file.close()
 
         return {'FINISHED'}

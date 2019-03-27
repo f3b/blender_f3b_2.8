@@ -14,7 +14,7 @@ class F3bContext:
         if v in self.ids:
             vid=self.ids[v]
         else:
-            vid=str(hash(v))
+            vid=str(type(v).__name__)+"_"+str(hash(v))
         return vid  
 
     def setUpdateNeededFor(self, obj):

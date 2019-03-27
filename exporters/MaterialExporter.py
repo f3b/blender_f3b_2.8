@@ -22,7 +22,7 @@ EXT_FORMAT_MAP={"targa":"tga","jpeg":"jpg","targa_raw":"tga"}
              
 
 def exportDDSs():
-    if CONVERT_TO_DDS_QUEUE == 0: return
+    if len(CONVERT_TO_DDS_QUEUE) == 0: return
     BATCH_SIZE=8 
     ii=0
     while True:

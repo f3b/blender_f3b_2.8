@@ -31,7 +31,7 @@ class Sampler:
             pbone = self.obj.pose.bones[self.pose_bone_idx]
             mat4 = pbone.matrix
             if pbone.parent:
-                mat4 = pbone.parent.matrix.inverted() * mat4
+                mat4 = pbone.parent.matrix.inverted() @ mat4
         else:
             mat4 = self.obj.matrix_local
         if self.previous_mat4 is None or not equals_mat4(mat4, self.previous_mat4, 0.000001):

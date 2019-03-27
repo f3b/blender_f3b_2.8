@@ -22,7 +22,6 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
     n_uv_layers=min(9, len(src_mesh.uv_layers)) 
 
     #Collect vertices
-    max_i=0
     for  i, poly in enumerate(src_mesh.polygons):        
         is_smooth = poly.use_smooth        
         if (material_index != poly.material_index):
@@ -41,16 +40,22 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
                 vertex.c.append(1.0)
             vertex.tx = [[]] * n_uv_layers
             vertex.tg = [[]] * n_uv_layers
-            
-            if vertex.i>max_i: max_i=vertex.i
             raw_verts.append(vertex)
 
     #Build mesh
     mesh=Mesh()
-    mesh.verts=[None]*(max_i+1)
+    dedupli={}
+    indexc=0
     for vertex in raw_verts:
-        mesh.verts[vertex.i]=vertex
-        mesh.indexes.append(vertex.i)     
+        index=None
+        if vertex.i in dedupli:
+            index=dedupli[vertex.i]
+        else:
+            index=indexc
+            dedupli[vertex.i]=index
+            indexc=indexc+1
+            mesh.verts.append(vertex)
+        mesh.indexes.append(index)
 
     #Collect UV and TAN layers for each vert
     for tx_id in range(0,n_uv_layers):
@@ -67,7 +72,7 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
                     vertex.tg[tx_id].append(1)
  
     print("Number of points: " + str(len(mesh.indexes)))
-    print("Number of unique vertex: " + str(len(mesh.verts)))  
+    print("Number of unique vertices: " + str(len(mesh.verts)))  
 
     armature = src_geometry.find_armature()
     if (armature):

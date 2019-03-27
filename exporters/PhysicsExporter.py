@@ -136,7 +136,7 @@ def export_rb(ctx: F3bContext,ob, phy_data, data):
 
     rigidbody.shape = shape
 
-    collision_groups = ob.rigid_body.collision_groups
+    collision_groups = ob.rigid_body.collision_collections
     collision_group = 0
     i = 0
     for g in collision_groups:
@@ -156,5 +156,6 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
         if obj.hide_render or (ctx.cfg.optionExportSelection and not obj.select_get()):
             #sprint("Skip ",obj,"not selected/render disabled")
             continue
+        phy_data = None
         phy_data = export_rb(ctx,obj, phy_data, data)
         export_rbct(ctx,obj, phy_data, data)

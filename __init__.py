@@ -24,35 +24,34 @@ bl_info = {
 
 import os,sys,bpy
 
+#Load dependencies
 _modules_path = os.path.join(os.path.dirname(__file__), "libs")
 for path in os.listdir(_modules_path):
     p=os.path.join(_modules_path,path)
     print("Load library ",p)
     sys.path.append(p)
-# del _modules_path
-
-# _modules_path = os.path.join(os.path.dirname(__file__), "libs")
-# for root,subdirs,files in os.walk(_modules_path):
-#     for path in subdirs:
-#         p=os.path.join(root,path)
-#         print("Load library ",str(p))
-#         sys.path.append(p)
-
-# sys.path.append(os.path.join(os.path.dirname(__file__), "exporters"))
-# sys.path.append(os.path.dirname(__file__))
+del _modules_path
+print(sys.path)
 
 
-from . import F3bExporterOperator
-
-modules=[
-    F3bExporterOperator
-]
 
 def register():
-    for mod in modules:
-        mod.register()
+    print("f3b exporter: Init")
+    from . import F3bExporterOperator
+    F3bExporterOperator.register()
 
 def unregister():
-    for mod in modules:
-        mod.unregister()
+    print("f3b exporter: Destroy")
+    from . import F3bExporterOperator
+    F3bExporterOperator.unregister()
     
+def main():
+    try:
+        unregister()
+    except (RuntimeError, ValueError):
+        pass
+    register()
+
+
+if __name__ == "__main__":
+    main()
