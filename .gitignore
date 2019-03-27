@@ -1,0 +1,11 @@
+.env
+bin/
+tmp/
+**/__pycache__/
+__pycache__/
+.Trash/
+.vscode/
+fake-bpy-module/
+*.so
+*.ddl
+libs/
