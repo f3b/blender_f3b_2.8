@@ -39,12 +39,16 @@ def register():
     print("f3b exporter: Init")
     from . import F3bExporterOperator
     F3bExporterOperator.register()
+    from .tools import F3bMaterialLoader
+    F3bMaterialLoader.register()
 
 def unregister():
     print("f3b exporter: Destroy")
     from . import F3bExporterOperator
     F3bExporterOperator.unregister()
-    
+    from .tools import F3bMaterialLoader
+    F3bMaterialLoader.unregister()
+
 def main():
     try:
         unregister()
