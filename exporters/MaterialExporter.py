@@ -10,6 +10,8 @@ from ..F3bContext import *
 from ..Utils import *
 from .. import Logger as log
 from .. import DDSWriter
+import shutil
+import hashlib
 
 
 CONVERT_TO_DDS_QUEUE=[]
@@ -55,6 +57,8 @@ def exportDDSs():
             break 
     for f in CONVERT_TO_DDS_QUEUE:
         try:
+            chash_file=f[1]+".dds.exp_hash"
+            os.rename(chash_file+".temp",chash_file)
             os.remove(f[1]) 
         except: pass
 
@@ -73,7 +77,7 @@ def export_tex(ctx, solid,args,src, dst):
 
     origin_file=bpy.path.abspath(src.filepath) 
     print("Base texture name",base_name,"assets path",ctx.topath)
-    output_file=os.path.join(ctx.tofile,"Textures",base_name)+ext  
+    output_file=os.path.join(ctx.topath,"Textures",base_name)+ext  
     print("Write texture in",output_file)
 
     output_parent=os.path.dirname(output_file)
@@ -92,55 +96,88 @@ def export_tex(ctx, solid,args,src, dst):
                 f.write(src.packed_file.data)
         else:
             print(origin_file,"will be copied in",output_file)
-            import shutil
             if origin_file != output_file:
-                shutil.copyfile(origin_file, output_file)       
-        if not ext==".dds" and ctx.cfg.optionToDDS: 
-            print("Convert to DDS")              
-            dds_file=os.path.join(ctx.topath,"Textures",base_name)+".dds"       
-            dds_args=args
-            format =None
-            srgb=False
-            if "dds{" in dds_args:
-                dds_args=dds_args[dds_args.index("dds{")+4:]
-                dds_args=dds_args[:dds_args.index("}")]
-                dds_args=dds_args.split(",")
-                for dds_arg in dds_args:
-                    key,value=dds_arg.split("=")
-                    key=key.strip()
-                    if key=="solid" and solid and value!=None:      
-                        format=value.replace("'","").strip()
-                    elif key=="alpha" and not solid and value!=None:
-                        format=value.replace("'","").strip()
-                    elif key=="srgb":
-                        srgb=True
+                shutil.copyfile(origin_file, output_file)    
 
-            if format==None:
-                format="UNCOMPRESSED"
-            if srgb:
-                print("Use SRGB")
+        toDDS=not ext==".dds" and ctx.cfg.optionToDDS
 
-            format=format.upper()
-           
-            if format=="ATI2" or format=="3DC":
-                format="ATI_3DC"
-            elif format=="DXT1" or format=="DXT3" or format=="DXT5":
-                format="S3TC_"+format
-            elif format=="UNCOMPRESSED":
-                format="ARGB8"
-            CONVERT_TO_DDS_QUEUE.append((format,output_file,dds_file,srgb))
+        if toDDS: 
+            chash=""
+            chash_file=output_file+".dds.exp_hash"
+
+            print("Read previous hash "+chash_file)
+            if os.path.exists(chash_file):
+                with open(chash_file,'r') as f:
+                    chash=f.read().strip()
+            print(chash)
+
+            print("Read current hash from "+output_file)
+            exphash=hashlib.sha256()
+            with open(output_file,'rb') as f:
+                while True:
+                    data = f.read(65536)
+                    if not data:
+                        break
+                    exphash.update(data)
+            exphash=str(exphash.hexdigest())
+            print(exphash)
+
+
+            if exphash != chash:       
+                with open(chash_file+".temp",'w') as f:
+                    f.write(exphash)
+
+                print("Convert to DDS")  
+                dds_file=os.path.join(ctx.topath,"Textures",base_name)+".dds"       
+                dds_args=args
+                format =None
+                srgb=False
+                if "dds{" in dds_args:
+                    dds_args=dds_args[dds_args.index("dds{")+4:]
+                    dds_args=dds_args[:dds_args.index("}")]
+                    dds_args=dds_args.split(",")
+                    for dds_arg in dds_args:
+                        key,value=dds_arg.split("=")
+                        key=key.strip()
+                        if key=="solid" and solid and value!=None:      
+                            format=value.replace("'","").strip()
+                        elif key=="alpha" and not solid and value!=None:
+                            format=value.replace("'","").strip()
+                        elif key=="srgb":
+                            srgb=True
+
+                if format==None:
+                    format="UNCOMPRESSED"
+                if srgb:
+                    print("Use SRGB")
+
+                format=format.upper()
+            
+                if format=="ATI2" or format=="3DC":
+                    format="ATI_3DC"
+                elif format=="DXT1" or format=="DXT3" or format=="DXT5":
+                    format="S3TC_"+format
+                elif format=="UNCOMPRESSED":
+                    format="ARGB8"
+                CONVERT_TO_DDS_QUEUE.append((format,output_file,dds_file,srgb))
+            else:
+                print("Already converted to DDS. Skip")              
+                os.remove(output_file)
+
     else:
         print(base_name,"already up to date")
+
     if ctx.cfg.optionToDDS:  ext=".dds"
     dst.rpath = "Textures/"+base_name+ext
     print("Set rpath to", dst.rpath)
         
 def parseNode(ctx: F3bContext,input_node,input_type,dst_mat,input_label):                    
     #input_node=input.links[0].from_node
-    #input_type=input_node.type                    
+    #input_type=input_node.type      
     parts=input_label.split("+")
     input_label=parts[0]
     args=parts[1] if len(parts)>1 else ""
+    input_label=input_label.strip()
 
     if input_type=="RGB" or input_type=="RGBA":
         prop=dst_mat.properties.add()
@@ -288,6 +325,7 @@ def export_material(ctx: F3bContext,src_mat, dst_mat):
 
 
 def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
+    global CONVERT_TO_DDS_QUEUE
     CONVERT_TO_DDS_QUEUE=[]
     for obj in scene.objects:
         if obj.hide_render or (ctx.cfg.optionExportSelection and not obj.select_get()):
