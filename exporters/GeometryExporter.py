@@ -34,6 +34,7 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
             vertex.i=vl.vertex_index
             vertex.n = cnv_toVec3ZupToYup(vertex.from_vertex.normal if is_smooth else poly.normal) 
             vertex.p=cnv_toVec3ZupToYup(vertex.from_vertex.co)
+            vertex.loop_index=k
             if src_mesh.vertex_colors.active:
                 vertex.c=[]
                 vertex.c.extend(src_mesh.vertex_colors.active.data[k].color) #TODO: support multiple layers (?)
@@ -42,26 +43,12 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
             vertex.tg = [[]] * n_uv_layers
             raw_verts.append(vertex)
 
-    #Build mesh
-    mesh=Mesh()
-    dedupli={}
-    indexc=0
-    for vertex in raw_verts:
-        index=None
-        if vertex.i in dedupli:
-            index=dedupli[vertex.i]
-        else:
-            index=indexc
-            dedupli[vertex.i]=index
-            indexc=indexc+1
-            mesh.verts.append(vertex)
-        mesh.indexes.append(index)
-
-    #Collect UV and TAN layers for each vert
+     #Collect UV and TAN layers for each vert
     for tx_id in range(0,n_uv_layers):
         src_mesh.calc_tangents(uvmap = src_mesh.uv_layers[tx_id].name)            
-        for vertex in mesh.verts:
-            vertex.tx[tx_id].extend(src_mesh.uv_layers[tx_id].data[vertex.i].uv)
+        for vertex in raw_verts:
+            texcoord=src_mesh.uv_layers[tx_id]
+            vertex.tx[tx_id].extend(texcoord.data[vertex.loop_index].uv)
             if export_tangents:
                 tan = cnv_toVec3ZupToYup(vertex.from_loop.tangent)
                 btan = cnv_toVec3ZupToYup(vertex.from_loop.bitangent)
@@ -71,6 +58,24 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
                 else:
                     vertex.tg[tx_id].append(1)
  
+
+    #Build mesh and deduplication
+    mesh=Mesh()
+    dedupli={}
+    indexc=0
+    for vertex in raw_verts:
+        index=None
+        h=hash(vertex)
+        if h in dedupli:
+            index=dedupli[h]
+        else:
+            index=indexc
+            dedupli[h]=index
+            indexc=indexc+1
+            mesh.verts.append(vertex)
+        mesh.indexes.append(index)
+
+
     print("Number of points: " + str(len(mesh.indexes)))
     print("Number of unique vertices: " + str(len(mesh.verts)))  
 
