@@ -68,7 +68,7 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     for obj in scene.objects:
         if obj.hide_render or (ctx.cfg.optionExportSelection and not obj.select_get()):
             continue
-        if obj.type == 'LAMP':
+        if obj.type == 'LAMP' or obj.type == 'LIGHT':
             src_light = obj.data
             if ctx.checkUpdateNeededAndClear(src_light):
                 dst_light = data.lights.add()
