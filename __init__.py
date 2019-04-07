@@ -36,26 +36,31 @@ print(sys.path)
 
 
 def register():
+    try:
+        unregister()
+    except (RuntimeError, ValueError):
+        pass
     print("f3b exporter: Init")
     from . import F3bExporterOperator
     F3bExporterOperator.register()
-    from .tools import F3bMaterialLoader
-    F3bMaterialLoader.register()
+    from .tools import F3bTools
+    F3bTools.register()
+
 
 def unregister():
     print("f3b exporter: Destroy")
     from . import F3bExporterOperator
     F3bExporterOperator.unregister()
-    from .tools import F3bMaterialLoader
-    F3bMaterialLoader.unregister()
+    from .tools import F3bTools
+    F3bTools.unregister()
 
-def main():
-    try:
-        unregister()
-    except (RuntimeError, ValueError):
-        pass
-    register()
+# def main():
+#     try:
+#         unregister()
+#     except (RuntimeError, ValueError):
+#         pass
+#     register()
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

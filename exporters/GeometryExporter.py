@@ -7,7 +7,7 @@ from . import Relations
 from ..F3bContext import *
 from ..Utils import *
 from .. import Logger as log
-
+from ..tools import F3bLod
 
 from ..Mesh import *;
 
@@ -125,7 +125,7 @@ def make_group_to_bone_index(armature, src_geometry):
     return groupToBoneIndex
     
 
-def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.types.Scene, meshes):
+def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.types.Scene, meshes,lodLevel):
     mode =  'RENDER'
     # Set up modifiers whether to apply deformation or not
     # tips from https://code.google.com/p/blender-cod/source/browse/blender_26/export_xmodel.py#185
@@ -163,6 +163,7 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
         dst.id = ctx.idOf(src_mesh) + "_" + str(material_index)
         dst.name = src_geometry.data.name + "_" + str(material_index)
         dst_mesh=dst
+        dst.lod=lodLevel
 
         #Collect mesh data 
         mesh=extract_meshdata(src_mesh,src_geometry,material_index,ctx.cfg.optionExportTangents)   
@@ -229,19 +230,52 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
 
 def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     for obj in scene.objects: # type: bpy.types.Object
-        if obj.hide_render or (ctx.cfg.optionExportSelection and not obj.select_get()):
+        if not ctx.isExportable(obj):
             #sprint("Skip ",obj,"not selected/render disabled")
             continue
         if obj.type == 'MESH':
             if len(obj.data.polygons) != 0 and ctx.checkUpdateNeededAndClear(obj.data):
-                meshes = export_meshes(ctx, obj, scene, data.meshes)
-                for material_index, mesh in meshes.items():
-                    # several object can share the same mesh
-                    for obj2 in scene.objects:
-                        if obj2.data == obj.data: 
-                            Relations.add(ctx,data,mesh.id,ctx.idOf(obj2))
-                    if material_index > -1 and material_index < len(obj.material_slots):
-                        src_mat = obj.material_slots[material_index].material
-                        Relations.add(ctx,data,ctx.idOf(src_mat),mesh.id)
+                matXmeshLods={}
+
+                # Collect meshes and their lods
+                for lodLevel in range(0,4):
+                    
+                    if not F3bLod.selectLod(obj,lodLevel): #Lod doesnt exist
+                        log.debug("Lod level "+str(lodLevel)+" not available. Break")
+                        break
+                    log.debug("Export lod "+str(lodLevel))
+                    meshes = export_meshes(ctx, obj, scene, data.meshes,lodLevel)
+
+                    for material_index, mesh in meshes.items(): 
+                        msh=matXmeshLods[material_index] if material_index in matXmeshLods else None
+                        if msh==None:
+                            msh=matXmeshLods[material_index]=[None]*4
+                            
+                        msh[lodLevel]=mesh
+                
+                F3bLod.selectLod(obj,0)
+
+                for material_index,meshes in matXmeshLods.items():       
+                    lodZero=None               
+                    for lodLevel in range(0,4):
+                        mesh=meshes[lodLevel]
+                        if not mesh: continue
+
+                        #first lod is attached to the object and have materials
+                        if lodZero==None:
+                            lodZero=mesh.id
+
+                            # several object can share the same mesh
+                            for obj2 in scene.objects:
+                                if obj2.data == obj.data: 
+                                        Relations.add(ctx,data,mesh.id,ctx.idOf(obj2))
+
+                            if material_index > -1 and material_index < len(obj.material_slots):
+                                src_mat = obj.material_slots[material_index].material
+                                Relations.add(ctx,data,ctx.idOf(src_mat),mesh.id)
+
+                        else: #Other lods are attached to the first lod and are plain meshes
+                            Relations.add(ctx,data,mesh.id,lodZero)
+
             else:
                 print("Skip ",obj,"already exported")

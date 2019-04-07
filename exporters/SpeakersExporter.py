@@ -48,7 +48,7 @@ def export_audio(ctx: F3bContext,src, dst):
 
 def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     for obj in scene.objects:
-        if obj.hide_render or (ctx.cfg.optionExportSelection and not obj.select_get()):
+        if not ctx.isExportable(obj):
             #print("Skip ",obj,"not selected/render disabled")
             continue
         if obj.type == 'SPEAKER':

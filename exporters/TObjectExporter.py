@@ -35,7 +35,7 @@ def exportCustomProperties(ctx: F3bContext,data: f3b.datas_pb2.Data,src:bpy.type
 
 def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     for obj in scene.objects: #type: bpy.types.Object         
-        if obj.hide_render or (ctx.cfg.optionExportSelection and not obj.select_get()):
+        if not ctx.isExportable(obj):
            # print("Skip ",obj,"not selected/render disabled")
             continue
         if ctx.checkUpdateNeededAndClear(obj):
@@ -49,7 +49,7 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                 cnv_rotation(quat, tobject.rotation)
             elif obj.type == 'Armature':
                 cnv_rotation(quat, tobject.rotation)
-            elif obj.type == 'LAMP':
+            elif obj.type == 'LAMP' or obj.type=="LIGHT":
                 rot = z_backward_to_forward(quat)
                 cnv_quatZupToYup(rot, tobject.rotation)
             else:

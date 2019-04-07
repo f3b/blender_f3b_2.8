@@ -12,7 +12,7 @@ from . import MaterialExporter
 
 def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     for obj in scene.objects:
-        if obj.hide_render or (ctx.cfg.optionExportSelection and not obj.select_get()):
+        if not ctx.isExportable(obj):
             #sprint("Skip ",obj,"not selected/render disabled")
             continue 
         for i in range(len(obj.particle_systems)):
