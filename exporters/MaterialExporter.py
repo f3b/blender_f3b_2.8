@@ -322,11 +322,12 @@ def export_material(ctx: F3bContext,src_mat, dst_mat):
                     parseNode(ctx,input_node,input_type,dst_mat,input_label)
                 
 
-
-
-def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
+def resetDDSConversionQueue():
     global CONVERT_TO_DDS_QUEUE
     CONVERT_TO_DDS_QUEUE=[]
+
+def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
+    resetDDSConversionQueue()
     for obj in scene.objects:
         if not ctx.isExportable(obj):
             continue
@@ -337,3 +338,6 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                     dst_mat = data.materials.add()
                     export_material(ctx,src_mat, dst_mat)
     if ctx.cfg.optionToDDS: exportDDSs()
+    resetDDSConversionQueue()
+
+    

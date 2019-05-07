@@ -21,7 +21,7 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
             if src_e.type != "EMITTER": continue
             if ctx.checkUpdateNeededAndClear(src_e) or 1==1:  
                 dst_e = data.cr_emitters.add()
-                dst_e.id=ctx.checkUpdateNeededAndClear(obj)+"_em_"+str(i)
+                dst_e.id=ctx.idOf(obj)+"_em_"+str(i)
                 dst_e.name=src_e.name
                 print("Export particle emitter " +src_e.name)
                 # fps=(1.0/src_e.timestep)
@@ -76,7 +76,7 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                 else:
                     dst_e.object_renderer.size=src_e.particle_size
                     dst_e.object_renderer.size_variation=src_e.size_random
-                    mesh=src_e.dupli_object
+                    mesh=src_e.instance_object
 
 
             
@@ -85,13 +85,17 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                 ef_weight_damper=src_e.effector_weights.all
                 dst_e.forcefields_influence.gravity=src_e.effector_weights.gravity*ef_weight_damper
 
+                MaterialExporter.exportDDSs()
+                MaterialExporter.resetDDSConversionQueue()
                 if mesh!=None and mesh.type == 'MESH':
                     ctx.checkUpdateNeededAndClear(mesh.data)
                     if len(mesh.data.polygons) != 0:
-                        meshes = GeometryExporter.export_meshes(ctx,mesh, dst_e.meshes, scene)
+                        meshes = GeometryExporter.export_meshes(ctx,mesh,scene, dst_e.meshes,0)
                         for material_index, m in meshes.items():
                             if material_index > -1 and material_index < len(mesh.material_slots):
                                 src_mat = mesh.material_slots[material_index].material
                                 dst_mat = dst_e.materials.add()
                                 MaterialExporter.export_material(ctx,src_mat, dst_mat)
+                MaterialExporter.exportDDSs()
+                MaterialExporter.resetDDSConversionQueue()
             Relations.add(ctx,data,ctx.idOf(obj),dst_e.id)                   
