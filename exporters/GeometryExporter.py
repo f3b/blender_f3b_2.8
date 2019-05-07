@@ -36,9 +36,13 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
             vertex.p=cnv_toVec3ZupToYup(vertex.from_vertex.co)
             vertex.loop_index=k
             if src_mesh.vertex_colors.active:
-                vertex.c=[]
-                vertex.c.extend(src_mesh.vertex_colors.active.data[k].color) #TODO: support multiple layers (?)
-                vertex.c.append(1.0)
+                c=src_mesh.vertex_colors.active.data[k].color
+                vertex.c=[c[0],
+                c[1],
+                c[2],
+                1.0  ] #TODO: support multiple layers (?)
+            else:
+                vertex.c=[0,0,0,1.0]
             vertex.tx = [[]] * n_uv_layers
             vertex.tg = [[]] * n_uv_layers
             raw_verts.append(vertex)
