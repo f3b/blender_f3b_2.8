@@ -43,17 +43,15 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
             tobject.id = ctx.idOf(obj)
             tobject.name = obj.name
             loc, quat, scale = obj.matrix_local.decompose()
-            cnv_scale(scale, tobject.scale)
-            cnv_translation(loc, tobject.translation)
-            if obj.type == 'MESH':
-                cnv_rotation(quat, tobject.rotation)
-            elif obj.type == 'Armature':
-                cnv_rotation(quat, tobject.rotation)
-            elif obj.type == 'LAMP' or obj.type=="LIGHT":
+            cnv_vec3(swizzle_scale(scale), tobject.scale)
+            cnv_vec3(swizzle_vector(loc), tobject.translation)
+
+            if obj.type == 'LAMP' or obj.type=="LIGHT":
                 rot = z_backward_to_forward(quat)
-                cnv_quatZupToYup(rot, tobject.rotation)
+                cnv_qtr(swizzle_rotation(rot), tobject.rotation)
             else:
-                cnv_rotation(rot_quat(obj), tobject.rotation)
+                cnv_qtr(swizzle_rotation(quat), tobject.rotation)
+
             if obj.parent is not None:
                 Relations.add(ctx, data, ctx.idOf(obj.parent), ctx.idOf(obj))
             exportCustomProperties(ctx,data, obj, tobject)

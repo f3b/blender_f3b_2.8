@@ -34,7 +34,7 @@ def export_rbct(ctx: F3bContext,ob, phy_data, data):
     if ct_type == "GENERIC":
         generic = constraint.generic
         cnv_vec3((0, 0, 0), generic.pivotA)
-        cnv_vec3(cnv_toVec3ZupToYup(o1_wp-o2_wp), generic.pivotB)
+        cnv_vec3(swizzle_vector(o1_wp-o2_wp), generic.pivotB)
         generic.disable_collisions = btct.disable_collisions
 
         if btct.use_limit_lin_x:
@@ -79,10 +79,10 @@ def export_rbct(ctx: F3bContext,ob, phy_data, data):
             limit_ang_z_upper = float('inf')
             limit_ang_z_lower = float('-inf')
 
-        cnv_vec3(cnv_toVec3ZupToYup((limit_lin_x_upper, limit_lin_y_upper, limit_lin_z_upper)), generic.upperLinearLimit)
-        cnv_vec3(cnv_toVec3ZupToYup((limit_lin_x_lower, limit_lin_y_lower, limit_lin_z_lower)), generic.lowerLinearLimit)
-        cnv_vec3(cnv_toVec3ZupToYup((limit_ang_x_upper, limit_ang_y_upper, limit_ang_z_upper)), generic.upperAngularLimit)
-        cnv_vec3(cnv_toVec3ZupToYup((limit_ang_x_lower, limit_ang_y_lower, limit_ang_z_lower)), generic.lowerAngularLimit)
+        cnv_vec3(swizzle_vector((limit_lin_x_upper, limit_lin_y_upper, limit_lin_z_upper)), generic.upperLinearLimit)
+        cnv_vec3(swizzle_vector((limit_lin_x_lower, limit_lin_y_lower, limit_lin_z_lower)), generic.lowerLinearLimit)
+        cnv_vec3(swizzle_vector((limit_ang_x_upper, limit_ang_y_upper, limit_ang_z_upper)), generic.upperAngularLimit)
+        cnv_vec3(swizzle_vector((limit_ang_x_lower, limit_ang_y_lower, limit_ang_z_lower)), generic.lowerAngularLimit)
 
 
 def export_rb(ctx: F3bContext,ob, phy_data, data):
@@ -107,10 +107,7 @@ def export_rb(ctx: F3bContext,ob, phy_data, data):
     rigidbody.isKinematic = ob.rigid_body.kinematic
     rigidbody.friction = ob.rigid_body.friction
     rigidbody.restitution = ob.rigid_body.restitution
-    if not ob.rigid_body.use_margin:
-        rigidbody.margin = 0
-    else:
-        rigidbody.margin = ob.rigid_body.collision_margin
+    rigidbody.margin = ob.rigid_body.collision_margin
 
     rigidbody.linearDamping = ob.rigid_body.linear_damping
     rigidbody.angularDamping = ob.rigid_body.angular_damping

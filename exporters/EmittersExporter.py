@@ -57,7 +57,7 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                 dst_e.velocity.normal_factor=src_e.normal_factor
                 dst_e.velocity.tangent_factor=src_e.tangent_factor
                 dst_e.velocity.tangent_phase=src_e.tangent_phase
-                cnv_vec3(cnv_toVec3ZupToYup(src_e.object_align_factor),  dst_e.velocity.object_align_factor)
+                cnv_vec3(swizzle_vector(src_e.object_align_factor),  dst_e.velocity.object_align_factor)
                 dst_e.velocity.object_factor=src_e.object_factor
                 dst_e.velocity.variation=src_e.factor_random
 

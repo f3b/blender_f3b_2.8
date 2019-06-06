@@ -22,15 +22,15 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                     cplane.id = ctx.idOf(obj)
                     cplane.name = obj.name
                     wm = obj.matrix_world
-                    cnv_vec3(cnv_toVec3ZupToYup(wm.to_translation()), cplane.point)
+                    cnv_vec3(swizzle_vector(wm.to_translation()), cplane.point)
                     rot=wm.to_quaternion()
                     normal=None
                     ps = obj.data.polygons
                     for p in ps:
                         normal=(p.normal)
                         break
-                    cnv_vec3(cnv_toVec3ZupToYup(rot*normal), cplane.normal)
-                    cnv_vec3(cnv_toVec3ZupToYup(obj.dimensions), cplane.extents)
+                    cnv_vec3(swizzle_vector(rot*normal), cplane.normal)
+                    cnv_vec3(swizzle_vector(obj.dimensions), cplane.extents)
                     cplane.damping=m.settings.damping_factor
                     cplane.damping_randomness=m.settings.damping_random
                     cplane.friction=m.settings.friction_factor

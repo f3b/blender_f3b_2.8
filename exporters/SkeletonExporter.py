@@ -29,10 +29,10 @@ def export_skeleton(ctx: F3bContext,src, dst):
         # boneMat = armature.convert_space(pose_bone=src_bone, matrix=src_bone.matrix, from_space='POSE', to_space='LOCAL_WITH_PARENT')
         # loc, quat, sca = boneMat.decompose()
 
-        cnv_scale(sca, dst_bone.scale)
-        cnv_translation(loc, dst_bone.translation)
+        cnv_vec3(swizzle_scale(sca), dst_bone.scale)
+        cnv_vec3(swizzle_vector(loc), dst_bone.translation)
         # cnv_scale(loc, transform.translation)
-        cnv_rotation(quat, dst_bone.rotation)
+        cnv_qtr(swizzle_rotation(quat), dst_bone.rotation)
         # cnv_quatZupToYup(quat, transform.rotation)
         # cnv_quat(quat, transform.rotation)
         if src_bone.parent:

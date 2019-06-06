@@ -32,8 +32,8 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
             vertex.from_loop = vl
             vertex.from_vertex = src_mesh.vertices[vl.vertex_index]
             vertex.i=vl.vertex_index
-            vertex.n = cnv_toVec3ZupToYup(vertex.from_vertex.normal if is_smooth else poly.normal) 
-            vertex.p=cnv_toVec3ZupToYup(vertex.from_vertex.co)
+            vertex.n = swizzle_vector(vertex.from_vertex.normal if is_smooth else poly.normal) 
+            vertex.p=swizzle_vector(vertex.from_vertex.co)
             vertex.loop_index=k
             if src_mesh.vertex_colors.active:
                 c=src_mesh.vertex_colors.active.data[k].color
@@ -54,10 +54,10 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
             texcoord=src_mesh.uv_layers[tx_id]
             vertex.tx[tx_id].extend(texcoord.data[vertex.loop_index].uv)
             if export_tangents:
-                tan = cnv_toVec3ZupToYup(vertex.from_loop.tangent)
-                btan = cnv_toVec3ZupToYup(vertex.from_loop.bitangent)
+                tan = swizzle_vector(vertex.from_loop.tangent)
+                btan = swizzle_vector(vertex.from_loop.bitangent)
                 vertex.tg[tx_id]=tan
-                if dot_vec3(cross_vec3(cnv_toVec3ZupToYup(vertex.n),tan),btan) < 0.0:
+                if dot_vec3(cross_vec3(swizzle_vector(vertex.n),tan),btan) < 0.0:
                     vertex.tg[tx_id].append(-1)
                 else:
                     vertex.tg[tx_id].append(1)
@@ -116,7 +116,7 @@ def find_bone_influence(vertices, index, groupToBoneIndex, boneCount, boneIndex,
 def make_group_to_bone_index(armature, src_geometry):
     groupToBoneIndex = []
     bones = armature.data.bones    
-    bones_table = [b.name for b in bones]    
+    bones_table = [b.name for b in bones]   
     for  group in src_geometry.vertex_groups:
         groupName = group.name
         try:
@@ -125,7 +125,11 @@ def make_group_to_bone_index(armature, src_geometry):
             index = -1            
         groupToBoneIndex.append(index)
         if (index < 0):
-            print("groupVertex can't be bind to bone %s -> %s" % (groupName, index))        
+            print("groupVertex  %s can't be bound to bone %s" % (index,groupName))  
+        else:
+            print("groupVertex %s bound to bone %s" % (index,groupName))  
+
+      
     return groupToBoneIndex
     
 
@@ -141,15 +145,23 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
 
     tmp_modifier=[]
     #Add triangulate modifier
-    tmp_modifier.append(src_geometry.modifiers.new("TriangulateForF3b","TRIANGULATE"))
+    trimod=src_geometry.modifiers.new("TriangulateForF3b","TRIANGULATE")
+    trimod.keep_custom_normals=True
+    trimod.ngon_method="BEAUTY"
+    trimod.quad_method="BEAUTY"    
+    tmp_modifier.append(trimod)
 
     # -- without armature applied
     for mod in mod_armature:
         setattr(mod[0], mod_state_attr, False)
-    # FIXME apply transform for mesh under armature modify the blender data !!
-    # if src_geometry.find_armature():
-    #     apply_transform(src_geometry)
-    src_mesh = src_geometry.to_mesh(bpy.context.depsgraph, True)
+
+    bpy.context.view_layer.update()
+
+    # New apis
+    depsgraph=bpy.context.evaluated_depsgraph_get()
+    mesh_owner=src_geometry.evaluated_get(depsgraph)
+    src_mesh =  mesh_owner.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+
     # Restore modifier settings
     for mod in mod_armature:
         setattr(mod[0], mod_state_attr, mod[1])
@@ -225,6 +237,8 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
             dst_skin.boneCount.extend(mesh.skin.boneCount)
             dst_skin.boneIndex.extend(mesh.skin.boneIndex)
             dst_skin.boneWeight.extend(mesh.skin.boneWeight)
+    #New apis
+    mesh_owner.to_mesh_clear()
 
     for m in tmp_modifier:
         src_geometry.modifiers.remove(m)

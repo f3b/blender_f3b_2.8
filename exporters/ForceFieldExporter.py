@@ -12,4 +12,4 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     if scene.use_gravity:
         force_field=data.cr_forcefields.add()
         force_field.id="sceneGravity"
-        cnv_vec3(cnv_toVec3ZupToYup(scene.gravity), force_field.gravity.strength)
+        cnv_vec3(swizzle_vector(scene.gravity), force_field.gravity.strength)

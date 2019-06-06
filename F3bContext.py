@@ -5,6 +5,7 @@ class F3bContext:
     def __init__(self,cfg,tofile,topath):
         self.cfg=cfg
         self.ids={}
+        self.last_id=0
         self.updateNeeded={}
         self.textures=[]    
         self.tofile=tofile
@@ -15,7 +16,11 @@ class F3bContext:
         if v in self.ids:
             vid=self.ids[v]
         else:
-            vid=str(type(v).__name__)+"_"+str(hash(v))
+            vid=str(type(v).__name__)
+            vid+="_"        
+            vid+=str(self.last_id)
+            self.last_id+=1        
+            self.ids[v]=vid;                
         return vid  
 
     def setUpdateNeededFor(self, obj):

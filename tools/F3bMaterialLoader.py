@@ -96,7 +96,7 @@ def loadImages(material,path,inputs):
                         material.node_tree.links.new(bimg.outputs[0], input);                                        
                     bimg.image=bpy.data.images.load(file)
                     bimg.image.name=file_name
-                    bimg.color_space="COLOR" if issrgb else "NONE"                
+                    bimg.image.colorspace_settings.is_data=not issrgb              
                     found=True
                     break
             if found: break
