@@ -9,3 +9,6 @@ fake-bpy-module/
 *.so
 *.ddl
 libs/
+.gradle
+*.blend1
+fake_bpy_*

@@ -92,26 +92,18 @@ def extract_meshdata(src_mesh, src_geometry, material_index, export_tangents):
     return mesh
     
 
-def find_bone_influence(vertices, index, groupToBoneIndex, boneCount, boneIndex,    boneWeight):
-    totalWeight = 0.0
-    indexArray = []
-    weightArray = []
-    groups = sorted(vertices[index].groups, key = lambda x  : x.weight, reverse = True)
-    for  el in groups:
-        index = groupToBoneIndex[el.group]
-        weight = el.weight
-        if ((index >= 0) and (weight > 0)):
-            totalWeight += weight
-            indexArray.append(index)
-            weightArray.append(weight)                    
-    if (totalWeight > 0):
-        normalizer = 1.0 / totalWeight
-        boneCount.append(len(weightArray))
-        for  i in range(0, len(weightArray)):
-            boneIndex.append(indexArray[i])
-            boneWeight.append(weightArray[i] * normalizer)
-    else:
-        boneCount.append(0)       
+def find_bone_influence(vertices, index, groupToBoneIndex, boneCount, boneIndexOut,    boneWeightOut):
+    nbones=0
+    for g in vertices[index].groups:
+        groupIndex=g.group
+        boneIndex = groupToBoneIndex[groupIndex]
+        boneWeight = g.weight
+        if ((boneIndex >= 0) and (boneWeight > 0)):
+            boneIndexOut.append(boneIndex)
+            boneWeightOut.append(boneWeight)                
+            nbones+=1
+    boneCount.append(nbones)
+   
     
 def make_group_to_bone_index(armature, src_geometry):
     groupToBoneIndex = []
@@ -138,10 +130,10 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
     # Set up modifiers whether to apply deformation or not
     # tips from https://code.google.com/p/blender-cod/source/browse/blender_26/export_xmodel.py#185
     mod_armature = []
-    mod_state_attr =  'show_render'
+    # mod_state_attr =  'show_render'
     for mod in src_geometry.modifiers:
         if mod.type == 'ARMATURE':
-            mod_armature.append((mod, getattr(mod, mod_state_attr)))
+            mod_armature.append((mod, getattr(mod, 'show_render'),getattr(mod, 'show_viewport' ) ))
 
     tmp_modifier=[]
     #Add triangulate modifier
@@ -151,9 +143,19 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
     trimod.quad_method="BEAUTY"    
     tmp_modifier.append(trimod)
 
+    if  hasattr(src_geometry.data, 'use_auto_smooth') and src_geometry.data.use_auto_smooth:
+        print("Use edge split")
+        edgesplit=src_geometry.modifiers.new("EdgeSplitForF3b","EDGE_SPLIT")
+        edgesplit.split_angle = src_geometry.data.auto_smooth_angle
+        edgesplit.use_edge_angle = True
+        tmp_modifier.append(edgesplit)
+
+
+
     # -- without armature applied
     for mod in mod_armature:
-        setattr(mod[0], mod_state_attr, False)
+        setattr(mod[0], 'show_render', False)
+        setattr(mod[0], 'show_viewport', False)
 
     bpy.context.view_layer.update()
 
@@ -164,7 +166,8 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
 
     # Restore modifier settings
     for mod in mod_armature:
-        setattr(mod[0], mod_state_attr, mod[1])
+        setattr(mod[0], 'show_render', mod[1])
+        setattr(mod[0], 'show_viewport', mod[2])
 
     # dst.id = cfg.id_of(src_geometry.data)
     # dst.name = src_geometry.name
@@ -173,6 +176,7 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
         material_index = face.material_index
         if material_index not in dstMap:
             dstMap[material_index] = meshes.add()
+
 
     for material_index, dst in dstMap.items():
         dst.primitive = f3b.datas_pb2.Mesh.triangles
@@ -248,11 +252,11 @@ def export_meshes(ctx: F3bContext,src_geometry: bpy.types.Object,scene: bpy.type
 
 def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     for obj in scene.objects: # type: bpy.types.Object
-        if not ctx.isExportable(obj):
+        if not ctx.isExportable(obj) or obj.holdout_get():
             #sprint("Skip ",obj,"not selected/render disabled")
             continue
-        if obj.type == 'MESH':
-            if len(obj.data.polygons) != 0 and ctx.checkUpdateNeededAndClear(obj.data):
+        if obj.type == 'MESH'  or obj.type=="CURVE":
+            if (obj.type != 'MESH'  or len(obj.data.polygons) != 0) and ctx.checkUpdateNeededAndClear(obj.data):
                 matXmeshLods={}
 
                 # Collect meshes and their lods

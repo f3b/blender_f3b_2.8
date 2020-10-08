@@ -18,7 +18,9 @@ def register():
     F3bMaterialLoader.register()
     from . import F3bLod
     F3bLod.register()
-      
+    from . import F3bCollectionsUidGen
+    F3bCollectionsUidGen.register()
+
 
 def unregister():
     bpy.utils.unregister_class(F3B_TOOLS_PT_data_panel)
@@ -26,3 +28,5 @@ def unregister():
     F3bMaterialLoader.unregister()
     from . import F3bLod
     F3bLod.unregister()
+    from . import F3bCollectionsUidGen
+    F3bCollectionsUidGen.unregister()

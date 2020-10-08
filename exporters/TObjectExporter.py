@@ -7,6 +7,7 @@ from . import Relations
 from ..F3bContext import *
 from ..Utils import *
 from .. import Logger as log
+import mathutils
 
 def exportCustomProperties(ctx: F3bContext,data: f3b.datas_pb2.Data,src:bpy.types.Object, parent_data:f3b.tobjects_pb2.TObject):
     keys = [k for k in src.keys() if not (k.startswith('_') or k.startswith('cycles'))]
@@ -42,18 +43,60 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
             tobject :f3b.tobjects_pb2.TObject = data.tobjects.add()
             tobject.id = ctx.idOf(obj)
             tobject.name = obj.name
+            tobject.holdout=obj.holdout_get()
+
             loc, quat, scale = obj.matrix_local.decompose()
             cnv_vec3(swizzle_scale(scale), tobject.scale)
             cnv_vec3(swizzle_vector(loc), tobject.translation)
 
+
             if obj.type == 'LAMP' or obj.type=="LIGHT":
-                rot = z_backward_to_forward(quat)
-                cnv_qtr(swizzle_rotation(rot), tobject.rotation)
+                rot=fixLightRot(quat)
+                cnv_quatZupToYup(rot, tobject.rotation)
             else:
                 cnv_qtr(swizzle_rotation(quat), tobject.rotation)
 
             if obj.parent is not None:
-                Relations.add(ctx, data, ctx.idOf(obj.parent), ctx.idOf(obj))
+
+                if obj.parent_type=="BONE":
+              
+                    boneId= "boneAttach$"+ctx.idOf(obj.parent)+"$"+obj.parent_bone
+                    
+                    # bone=obj.parent.data.bones[obj.parent_bone]
+
+                    if ctx.checkUpdateNeededAndClear(boneId):
+                        bone_attach :f3b.tobjects_pb2.TObject = data.tobjects.add()
+                        bone_attach.id =boneId
+                        bone_attach.name = obj.parent_bone+"_attach"
+                        bone_attach.attached_to_bone=obj.parent_bone
+                        bone_attach.attached_to_bone_tail=True
+                        
+                        cnv_vec3((1,1,1), bone_attach.scale)
+                        cnv_vec3((0,0,0),  bone_attach.translation)
+                        cnv_qtr((1,0,0,0), bone_attach.rotation)
+
+                        Relations.add(ctx, data, ctx.idOf(obj.parent), boneId)
+
+                        # bone_attach :f3b.tobjects_pb2.TObject = data.tobjects.add()
+                        # bone_attach.id =boneId+"_tail"
+                        # bone_attach.name = obj.parent_bone+"_attach_tail"
+
+                        # cnv_vec3((1,1,1), bone_attach.scale)
+                        # cnv_vec3((0,0,-bone.length),  bone_attach.translation)
+                        # cnv_qtr((1,0,0,0), bone_attach.rotation)
+
+                        # Relations.add(ctx, data, boneId+"_head", boneId+"_tail")
+   
+                    Relations.add(ctx, data,boneId, ctx.idOf(obj))
+                else:
+                    Relations.add(ctx, data, ctx.idOf(obj.parent), ctx.idOf(obj))
+       
+
+            link=getLinkedCollection(obj)
+            if link: 
+                Relations.addExternal(ctx, data, ctx.idOf(obj), link)
+                print("Found external relation "+ ctx.idOf(obj) +" --> "+ link)
+
             exportCustomProperties(ctx,data, obj, tobject)
         else:
             log.debug("Skip "+obj+" already exported")

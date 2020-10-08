@@ -18,7 +18,7 @@ def findLod(obj,lodLevel,set=None,replace=True):
         
         if set:
             if not lod:
-                lod= bpy.data.objects.new(lodName+str(uuid.uuid1()),set)
+                lod= bpy.data.objects.new(lodName+str(uuid.uuid4()),set)
                 collection.objects.link(lod)
             elif replace:
                 lod.data=set
@@ -42,10 +42,11 @@ def selectLod(obj,lodLevel):
     if lod !=None:
         obj.data=lod.data
         if lodLevel!=0:
-            obj.data.materials.clear()
+        #     obj.data.materials.clear()
 
             for i in range(0,len(lodZero.data.materials)):
-                obj.data.materials.append(lodZero.data.materials[i])
+                if len(obj.data.materials)<i:  obj.data.materials.append(lodZero.data.materials[i])
+                else:  obj.data.materials[i]=lodZero.data.materials[i]
         found=True
 
     if lodLevel==0:
@@ -64,7 +65,7 @@ def selectLod(obj,lodLevel):
 def initLods(obj):
     lodGroupName=""
     if not "_f3b_Lod" in obj.data:
-        lodGroupName="LOD_"+str(uuid.uuid1())
+        lodGroupName="LOD_"+str(uuid.uuid4())
         obj.data["_f3b_Lod"]=lodGroupName
     else:
         lodGroupName=obj.data["_f3b_Lod"]

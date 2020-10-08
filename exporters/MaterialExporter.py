@@ -131,7 +131,9 @@ def export_tex(ctx, solid,args,src, dst):
                 dds_file=os.path.join(ctx.topath,"Textures",base_name)+".dds"       
                 dds_args=args
                 format =None
-                srgb=False
+                srgb=src.colorspace_settings.name=="sRGB"
+                print(src.colorspace_settings.name)
+                
                 if "dds{" in dds_args:
                     dds_args=dds_args[dds_args.index("dds{")+4:]
                     dds_args=dds_args[:dds_args.index("}")]
@@ -183,30 +185,35 @@ def parseNode(ctx: F3bContext,input_node,input_type,dst_mat,input_label):
         prop=dst_mat.properties.add()
         prop.id=input_label
         cnv_color(input_node.outputs[0].default_value,prop.vcolor)
-        print("Found color",prop.vcolor)
-    # Deprecated:  Use custom Float and Int nodes instead
-    #elif input_type=="VALUE":
-    #    prop=dst_mat.properties.add()
-    #    prop.id=input_label
-    #    prop.value=input_node.outputs[0].default_value
-    #    print("Found value",prop.value)
+        print("Export ",prop)
     elif input_type=="TEXTURE":
         prop=dst_mat.properties.add()
         prop.id=input_label
         export_tex(ctx,True,args,input_node.texture.image,prop.texture)
-        print("Found texture")
+        print("Export ",prop)
     elif input_type=="TEX_IMAGE":
         prop=dst_mat.properties.add()
         prop.id=input_label
         solid=len(input_node.outputs[1].links)==0 #If alpha is not connected= solid
         export_tex(ctx,solid,args,input_node.image,prop.texture)
-        print("Found texture")
+        print("Export ",prop)
+        if len( input_node.inputs)>0:
+            if len( input_node.inputs[0].links)>0:
+                vec= input_node.inputs[0].links[0].from_node
+                parseNode(ctx,vec,vec.type,dst_mat,input_label)
     elif input_type=="GROUP": # Custom nodes groups as input
         name=input_node.node_tree.name
         name=CYCLES_CUSTOM_NODEINPUT_PATTERN.match(name)
         if name != None:
             name=name.group(0).upper()
-            if name == "VEC3":
+            if name == "UVMAP":
+                if len(input_node.inputs[0].links)>0 :
+                    uvscrolldir=input_node.inputs[0].links[0].from_node
+                    parseNode(ctx,uvscrolldir,uvscrolldir.type,dst_mat,input_label+"UVScroll")
+                if len(input_node.inputs[2].links)>0 :
+                    uvmult=input_node.inputs[2].links[0].from_node
+                    parseNode(ctx,uvmult,uvmult.type,dst_mat,input_label+"UVMult")
+            elif name == "VEC3":
                 x,y,z=input_node.inputs
                 x=x.default_value
                 y=y.default_value
@@ -214,7 +221,7 @@ def parseNode(ctx: F3bContext,input_node,input_type,dst_mat,input_label):
                 prop=dst_mat.properties.add()
                 prop.id=input_label
                 cnv_vec3((x,y,z), prop.vvec3)
-                print("Found vec3",prop.vvec3)
+                print("Export ",prop)
             elif name == "VEC2":
                 x,y=input_node.inputs
                 x=x.default_value
@@ -222,7 +229,7 @@ def parseNode(ctx: F3bContext,input_node,input_type,dst_mat,input_label):
                 prop=dst_mat.properties.add()
                 prop.id=input_label
                 cnv_vec2((x,y), prop.vvec2)
-                print("Found vec2",prop.vvec2)
+                print("Export ",prop)
             elif name == "VEC4" or name == "QTR":
                 x,y,z,w=input_node.inputs
                 x=x.default_value
@@ -232,7 +239,7 @@ def parseNode(ctx: F3bContext,input_node,input_type,dst_mat,input_label):
                 prop=dst_mat.properties.add()
                 prop.id=input_label
                 cnv_vec4((x,y,z,w), prop.vvec4 if name == "QTR" else prop.vqtr)
-                print("Found vec4",prop.vvec4)
+                print("Export ",prop)
             elif name=="RGBA":
                 r,g,b,a=input_node.inputs
                 
@@ -244,27 +251,27 @@ def parseNode(ctx: F3bContext,input_node,input_type,dst_mat,input_label):
                 prop=dst_mat.properties.add()
                 prop.id=input_label
                 cnv_color((r,g,b,a),prop.vcolor)
-                print("Found color",prop.vcolor)
+                print("Export ",prop)
             elif name == "FLOAT":
                 prop=dst_mat.properties.add()
                 prop.id=input_label            
                 prop.vfloat=float(input_node.inputs[0].default_value)
-                print("Found Float",prop.vfloat)
+                print("Export ",prop)
             elif name == "INT":
                 prop=dst_mat.properties.add()
                 prop.id=input_label            
                 prop.vint=int(input_node.inputs[0].default_value)
-                print("Found Int",prop.vint)
+                print("Export ",prop)
             elif name == "TRUE":
                 prop=dst_mat.properties.add()
                 prop.id=input_label            
                 prop.vbool=True
-                print("Found boolean TRUE")
+                print("Export ",prop)
             elif name == "FALSE":
                 prop=dst_mat.properties.add()
                 prop.vbool=False     
                 prop.id=input_label     
-                print("Found boolean FALSE")          
+                print("Export ",prop)
             elif name == "PRESET":
                 for n in input_node.outputs[0].links[0].from_node.node_tree.nodes:
                     if n.type=="GROUP_OUTPUT":
@@ -320,6 +327,19 @@ def export_material(ctx: F3bContext,src_mat, dst_mat):
                     input_node=input.links[0].from_node
                     input_type=input_node.type    
                     parseNode(ctx,input_node,input_type,dst_mat,input_label)
+        
+        dst_mat.backfaceCulling=src_mat.use_backface_culling
+        
+        blending=src_mat.blend_method
+        if blending == 'OPAQUE':
+            dst_mat.blendMode =  f3b.datas_pb2.Material.opaque
+        elif blending == 'CLIP':
+           dst_mat.blendMode =  f3b.datas_pb2.Material.alpha_clip
+        elif blending=="BLEND":
+            dst_mat.blendMode =  f3b.datas_pb2.Material.alpha_blend
+        elif blending=="HASHED":
+            dst_mat.blendMode =  f3b.datas_pb2.Material.alpha_dithering
+
                 
 
 def resetDDSConversionQueue():
@@ -331,7 +351,7 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
     for obj in scene.objects:
         if not ctx.isExportable(obj):
             continue
-        if obj.type == 'MESH':
+        if obj.type == 'MESH' or obj.type=="CURVE":
             for i in range(len(obj.material_slots)):
                 src_mat = obj.material_slots[i].material
                 if  ctx.checkUpdateNeededAndClear(src_mat):

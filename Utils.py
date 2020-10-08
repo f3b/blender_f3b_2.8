@@ -96,35 +96,28 @@ def isset(v, k = None):
     
 
 
+def fixLightRot(quat):
 
-
-
-
-def z_backward_to_forward(quat):
-    """rotate around local Y (180deg) to move from z backward to z forward"""
-    # rotate the camera to be Zup and Ybackward like other blender object
-    # in blender camera and spotlight are face -Z
-    # see http://blender.stackexchange.com/questions/8999/convert-from-blender-rotations-to-right-handed-y-up-rotations-maya-houdini
-    # rot = r3d.view_rotation.copy()
-    # rot = mathutils.Quaternion((0, 0, 1, 1))
-    # rot = mathutils.Quaternion((-1, 1, 0, 0))  # -PI/2 axis x
-    # rot.rotate(mathutils.Quaternion((0, 0, 0, 1)))   # PI axis z
     qr0 = mathutils.Quaternion((0, 0, 1, 0))  # z forward
     qr0.normalize()
     qr0.rotate(quat)
     qr0.normalize()
-    # print("z_backward_to_forward : %r --> %r" % (quat, qr0))
     return qr0
 
+def cnv_quatZupToYup(src, dst):
+    src0 = src.copy()
+    q = mathutils.Quaternion((-1, 1, 0, 0))
+    q.normalize()
+    src0.rotate(q)
+    
+    dst.w = src0.w
+    dst.x = src0.x
+    dst.y = src0.y
+    dst.z = src0.z
+    return dst
+    
 
-def y_up_to_backward(quat):
-    """rotate around local X (90deg) to move from y up to -y forward"""
-    qr1 = mathutils.Quaternion((-1, -1, 0, 0))
-    qr1.normalize()
-    qr1.rotate(quat)
-    qr1.normalize()
-    # print("y_up_to_backward : %r --> %r" % (quat, qr1))
-    return qr1
+
 
 
 
@@ -134,6 +127,51 @@ def equals_mat4(m0, m1, max_cell_delta):
     for i in range(0, 4):
         for j in range(0, 4):
             d = m0[i][j] - m1[i][j]
-            if d > max_cell_delta or d < -max_cell_delta:
+            if d<0: d=-d
+            if d > max_cell_delta:
                 return False
     return True
+
+uid_key="f3b_collection_uid$"
+
+# def getTopObjectId(ctx: F3bContext,obj:bpy.types.Object ):
+#     if obj.parent:
+#         return getTopObjectId(ctx,obj.parent)
+#     else:
+#         return ctx.idOf(obj)
+        
+
+def getCollectionUid(col,defaultv):
+    uuidObj =None
+
+    for o in col.objects:
+        if o.name.startswith(uid_key):
+            uuidObj=o
+            break
+    
+    if not uuidObj and defaultv: 
+        uuidObj = bpy.data.objects.new(uid_key, None)
+        col.objects.link(uuidObj)    
+        uuidObj.hide_viewport=True
+        uuidObj.hide_render=True
+        uuidObj[uid_key]=defaultv
+    
+    return uuidObj[uid_key] if uuidObj and uid_key in uuidObj else None
+
+def getLinkedCollection(obj):
+    linkedCollections={}
+    for c in  bpy.data.collections:
+        if c.library:
+            linkedCollections[c.name]=c
+    if obj.is_instancer and obj.instance_type=="COLLECTION":
+        linkedCollection=linkedCollections[obj.instance_collection.name]
+        if linkedCollection:
+            f3bUid=None
+            for o in linkedCollection.objects:
+                if o.name.startswith(uid_key) and uid_key in o:
+                    f3bUid=o[uid_key]
+                    break
+            if f3bUid:
+                print(obj.name+" linked from "+linkedCollection.name+" with uuid "+f3bUid)
+                return f3bUid
+    return None

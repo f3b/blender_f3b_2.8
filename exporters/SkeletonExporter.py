@@ -13,6 +13,7 @@ from .. import Logger as log
 def export_skeleton(ctx: F3bContext,src, dst):
     dst.id = ctx.idOf(src)
     dst.name = src.name
+    print("Export skeleton ",dst.name)
     # for src_bone in armature.pose.bones:
     for src_bone in src.bones:
         dst_bone = dst.bones.add()
@@ -33,6 +34,8 @@ def export_skeleton(ctx: F3bContext,src, dst):
         cnv_vec3(swizzle_vector(loc), dst_bone.translation)
         # cnv_scale(loc, transform.translation)
         cnv_qtr(swizzle_rotation(quat), dst_bone.rotation)
+
+        dst_bone.length=src_bone.length
         # cnv_quatZupToYup(quat, transform.rotation)
         # cnv_quat(quat, transform.rotation)
         if src_bone.parent:
