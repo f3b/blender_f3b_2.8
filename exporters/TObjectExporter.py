@@ -49,8 +49,10 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
             cnv_vec3(swizzle_scale(scale), tobject.scale)
             cnv_vec3(swizzle_vector(loc), tobject.translation)
 
-
-            if obj.type == 'LAMP' or obj.type=="LIGHT":
+            if obj.type == 'CAMERA':
+                quat=fixLightRot(quat)
+                cnv_quatZupToYup(quat, tobject.rotation)
+            elif obj.type == 'LAMP' or obj.type=="LIGHT":
                 rot=fixLightRot(quat)
                 cnv_quatZupToYup(rot, tobject.rotation)
             else:
@@ -76,16 +78,6 @@ def export(ctx: F3bContext,data: f3b.datas_pb2.Data,scene: bpy.types.Scene):
                         cnv_qtr((1,0,0,0), bone_attach.rotation)
 
                         Relations.add(ctx, data, ctx.idOf(obj.parent), boneId)
-
-                        # bone_attach :f3b.tobjects_pb2.TObject = data.tobjects.add()
-                        # bone_attach.id =boneId+"_tail"
-                        # bone_attach.name = obj.parent_bone+"_attach_tail"
-
-                        # cnv_vec3((1,1,1), bone_attach.scale)
-                        # cnv_vec3((0,0,-bone.length),  bone_attach.translation)
-                        # cnv_qtr((1,0,0,0), bone_attach.rotation)
-
-                        # Relations.add(ctx, data, boneId+"_head", boneId+"_tail")
    
                     Relations.add(ctx, data,boneId, ctx.idOf(obj))
                 else:
